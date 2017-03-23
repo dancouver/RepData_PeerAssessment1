@@ -1,25 +1,170 @@
 ---
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+title: "PA1_template.Rmd"
+author: "Dan Hathway"
+date: "March 23, 2017"
+output: html_document
 ---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(ggplot2)
+```
+```{r 1: process file and generate summary }
+read.csv("activity.csv",stringsAsFactors= FALSE) ->activity
+aggregate(activity$steps,by=list(activity$date),FUN=sum) -> stepsummary
+colnames(stepsummary) <- c("Interval","Total Steps")
+```
+```{r 2: historgram of total steps, echo=FALSE}
+hist(stepsummary$`Total Steps`,xlab="Steps per Day",main ="Steps per day")
+```
+```{r 3: generate average summary vectors}
+## Two potential interpretations. First is median/mean within each day
+aggregate(activity$steps,by=list(activity$date),FUN=median, na.rm=TRUE) -> stepmedian
+aggregate(activity$steps,by=list(activity$date),FUN=mean, na.rm=TRUE) -> stepmean
+cbind(stepmedian,stepmean[,2]) ->stepaverage
+colnames(stepaverage) <-c("Date","Median","Mean")
+as.Date(stepaverage$Date) -> stepaverage$Date
+print(stepaverage)
+## Second interpretation is median/media over all the days
+print("Method 2 :median")
+median(stepsummary$`Total Steps`,na.rm=TRUE)
+print("Method 2 :mean")
+mean(stepsummary$`Total Steps`,na.rm=TRUE)
+```
+```{r 4: time series plot of mean average, echo=FALSE}
+aggregate(activity$steps,by=list(activity$interval),FUN=mean, na.rm=TRUE) ->intervalcounts
+colnames(intervalcounts) <- c("Interval","Total Steps")
+plot(intervalcounts,type="l",main="Average number of steps per interval")
+```
+```{r 5: calculate most productive 5-min interval}
+intervalcounts[which.max(intervalcounts$`Total Steps`),] -> maxinterval
+print(maxinterval)
+```
+```{r 6: Code to describe and show a strategy for imputing missing data }
+## an inspection of the data reveals that the missing data is in clean segments.
+activity[is.na(activity$steps),] ->nas
+print("number of NAs")
+nrow(nas)
+## 2304 rows
+print ("dates with NAs")
+unique(nas$date)
+## 8 days
+## meaning that NAs appear only in 8 days, over each of the 288 intervals per day
+## we have already prepared a data table intervalcounts (step 4) with means for each interval
+## just need to replace the 288 interval counts for each of the 8 days
+## make a copy of existing activity
+activity -> activity.old
+## make the appropriate substitutions
+activity$steps[activity$date=="2012-10-01"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-10-08"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-01"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-04"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-09"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-10"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-14"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-30"] <-intervalcounts$`Total Steps`
+## do the comparisons by creating a new set of means on the update data set
+aggregate(activity$steps,by=list(activity$interval),FUN=mean) ->newintervalcounts
+## if all the means are equal, then the following will be 0
+print("This should be zero")
+sum(newintervalcounts==intervalcounts) - nrow(intervalcounts) - nrow(newintervalcounts)
 
+## reprepare summary
+aggregate(activity$steps,by=list(activity$date),FUN=sum) -> stepsummary
+colnames(stepsummary) <- c("Interval","Total Steps")
+print("new mean")
+mean(stepsummary$`Total Steps`,na.rm=TRUE)
+print("new media")
+median(stepsummary$`Total Steps`,na.rm=TRUE)
+```
+```{r 7: Histogram [total number of steps taken each day], echo=FALSE }
 
-## Loading and preprocessing the data
-
-
-
-## What is mean total number of steps taken per day?
-
-
-
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+hist(stepsummary$`Total Steps`,xlab="Steps per Day",main ="Steps per day")
+```
+```{r 8: Panel plot}
+## create new column
+as.Date(activity$date) ->activity$date
+weekdays(activity$date)-> dowk
+cbind(activity,dowk) -> activity
+## split activity into 2
+subset(activity,dowk != "Saturday" & dowk != "Sunday") -> act_week
+subset(activity,dowk == "Saturday" | dowk == "Sunday") -> act_weekend
+## do aggregations
+aggregate(act_week$steps,by=list(act_week$interval),FUN=mean) ->week_counts
+aggregate(act_weekend$steps,by=list(act_weekend$interval),FUN=mean) ->weekend_counts
+## plot
+par(mfrow = c(2,1),mar=c(2,2,2,2))
+plot(week_counts,type="l",xlab="Interval",ylab="Step means",main="Weekday")
+plot(weekend_counts,type="l",xlab="Interval",ylab="Step means",main="Weekend")
+```
+```{r eval=FALSE}
+read.csv("activity.csv",stringsAsFactors= FALSE) ->activity
+aggregate(activity$steps,by=list(activity$date),FUN=sum) -> stepsummary
+colnames(stepsummary) <- c("Interval","Total Steps")
+hist(stepsummary$`Total Steps`,xlab="Steps per Day",main ="Steps per day")
+## Two potential interpretations. First is median/mean within each day
+aggregate(activity$steps,by=list(activity$date),FUN=median, na.rm=TRUE) -> stepmedian
+aggregate(activity$steps,by=list(activity$date),FUN=mean, na.rm=TRUE) -> stepmean
+cbind(stepmedian,stepmean[,2]) ->stepaverage
+colnames(stepaverage) <-c("Date","Median","Mean")
+as.Date(stepaverage$Date) -> stepaverage$Date
+print(stepaverage)
+## Second interpretation is median/media over all the days
+print("Method 2 :median")
+median(stepsummary$`Total Steps`,na.rm=TRUE)
+print("Method 2 :mean")
+mean(stepsummary$`Total Steps`,na.rm=TRUE)
+aggregate(activity$steps,by=list(activity$interval),FUN=mean, na.rm=TRUE) ->intervalcounts
+colnames(intervalcounts) <- c("Interval","Total Steps")
+plot(intervalcounts,type="l",main="Average number of steps per interval")
+intervalcounts[which.max(intervalcounts$`Total Steps`),] -> maxinterval
+print(maxinterval)
+## an inspection of the data reveals that the missing data is in clean segments.
+activity[is.na(activity$steps),] ->nas
+print("number of NAs")
+nrow(nas)
+## 2304 rows
+print ("dates with NAs")
+unique(nas$date)
+## 8 days
+## meaning that NAs appear only in 8 days, over each of the 288 intervals per day
+## we have already prepared a data table intervalcounts (step 4) with means for each interval
+## just need to replace the 288 interval counts for each of the 8 days
+## make a copy of existing activity
+activity -> activity.old
+## make the appropriate substitutions
+activity$steps[activity$date=="2012-10-01"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-10-08"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-01"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-04"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-09"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-10"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-14"] <-intervalcounts$`Total Steps`
+activity$steps[activity$date=="2012-11-30"] <-intervalcounts$`Total Steps`
+## do the comparisons by creating a new set of means on the update data set
+aggregate(activity$steps,by=list(activity$interval),FUN=mean) ->newintervalcounts
+## if all the means are equal, then the following will be 0
+print("This should be zero")
+sum(newintervalcounts==intervalcounts) - nrow(intervalcounts) - nrow(newintervalcounts)
+## reprepare summary
+aggregate(activity$steps,by=list(activity$date),FUN=sum) -> stepsummary
+colnames(stepsummary) <- c("Interval","Total Steps")
+print("new mean")
+mean(stepsummary$`Total Steps`,na.rm=TRUE)
+print("new media")
+median(stepsummary$`Total Steps`,na.rm=TRUE)
+hist(stepsummary$`Total Steps`,xlab="Steps per Day",main ="Steps per day")
+## create new column
+as.Date(activity$date) ->activity$date
+weekdays(activity$date)-> dowk
+cbind(activity,dowk) -> activity
+## split activity into 2
+subset(activity,dowk != "Saturday" & dowk != "Sunday") -> act_week
+subset(activity,dowk == "Saturday" | dowk == "Sunday") -> act_weekend
+## do aggregations
+aggregate(act_week$steps,by=list(act_week$interval),FUN=mean) ->week_counts
+aggregate(act_weekend$steps,by=list(act_weekend$interval),FUN=mean) ->weekend_counts
+## plot
+par(mfrow = c(2,1),mar=c(2,2,2,2))
+plot(week_counts,type="l",xlab="Interval",ylab="Step means",main="Weekday")
+plot(weekend_counts,type="l",xlab="Interval",ylab="Step means",main="Weekend")
+```
